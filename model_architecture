@@ -1,0 +1,125 @@
+if model_choice == 1:
+    #(1) Multivar-Autoenconder
+    def get_model():
+        model_1 = tf.keras.models.Sequential([
+            tf.keras.layers.InputLayer((window_size,4)),
+            tf.keras.layers.BatchNormalization(),
+            tf.keras.layers.LSTM(256,kernel_regularizer=tf.keras.regularizers.L2(l2_lambda)), #encoder portion
+            tf.keras.layers.BatchNormalization(),
+            tf.keras.layers.RepeatVector(prediction_steps), #encoded output for each timestep in the next LSTM layer
+            tf.keras.layers.BatchNormalization(),
+            tf.keras.layers.LSTM(256, return_sequences = True, kernel_regularizer=tf.keras.regularizers.L2(l2_lambda)),
+            tf.keras.layers.BatchNormalization(),
+            tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(128, activation = 'relu',kernel_regularizer=tf.keras.regularizers.L2(l2_lambda))),#one dense layer applied to each timestep output
+            tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(1)),
+            tf.keras.layers.Lambda(lambda x: (x*(maxrhum-minrhum))+ minrhum)
+        ])
+        return model_1
+        
+elif model_choice == 2
+     #(2) Conv2DLSTM for Spatiotemporal applications
+    def get_model():
+        convlstm_model = tf.keras.models.Sequential([
+                  tf.keras.layers.InputLayer((168,4,10,10),batch_size=batch_size),                             
+                  tf.keras.layers.BatchNormalization(),                             
+                  tf.keras.layers.ConvLSTM2D(64,3,1,'same','channels_first',(2,2),batch_size=batch_size),
+                  tf.keras.layers.MaxPool2D(3,data_format='channels_first',batch_size=batch_size),
+                  tf.keras.layers.Flatten(),
+                  tf.keras.layers.RepeatVector(prediction_steps),
+                  tf.keras.layers.LSTM(256, return_sequences=True),
+                  tf.keras.layers.BatchNormalization(),
+                  tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(128,'relu')),
+                  tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(1,'relu')),
+                  tf.keras.layers.Lambda(lambda x: (x*(rhum_max_44-rhum_min_44))+ rhum_min_44)
+
+  ])
+      return convlstm_model
+
+if model_choice == 3:
+  #(3) DeepLSTM
+  tf.keras.backend.clear_session()
+  def get_model():
+    model_3 = tf.keras.models.Sequential([
+        tf.keras.layers.LSTM(40, input_shape=[window_size,1],return_sequences=True), 
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.LSTM(40,return_sequences=True),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.LSTM(40),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dense(30, activation = 'relu'),
+        tf.keras.layers.Dense(prediction_steps),
+        tf.keras.layers.Lambda(lambda x: (x*(maxrhum-minrhum))+ minrhum)
+    ])
+    return model_3
+
+elif model_choice == 4:
+  #(4) Vanilla
+  tf.keras.backend.clear_session()
+  def get_model():
+    model_4 = tf.keras.models.Sequential([
+        tf.keras.layers.LSTM(128, input_shape=[window_size,1]),
+        tf.keras.layers.Dense(64, activation = 'relu'),
+        tf.keras.layers.Dense(prediction_steps),
+        tf.keras.layers.Lambda(lambda x: (x*(maxrhum-minrhum))+ minrhum)
+    ])
+    return model_4
+
+elif model_choice == 5:
+  #(5) CNN-LSTM 
+  tf.keras.backend.clear_session()
+  def get_model():
+    model_3 = tf.keras.models.Sequential([
+        tf.keras.layers.Conv1D(64,5,input_shape=[window_size,1], padding='same',data_format="channels_last",activation='relu'),
+        tf.keras.layers.MaxPooling1D(2),                               
+        tf.keras.layers.LSTM(50,return_sequences=True),
+        tf.keras.layers.LSTM(32),
+        tf.keras.layers.Dense(64, activation = 'relu'),
+        tf.keras.layers.Dense(32, activation = 'relu'), 
+        tf.keras.layers.Dense(prediction_steps),
+        tf.keras.layers.Lambda(lambda x: (x*(maxrhum-minrhum))+ minrhum)
+    ])
+    return model_5
+
+elif model_choice == 6:
+  #(6) EncoderDecoder 
+  tf.keras.backend.clear_session()
+  def get_model():
+    model_4 = tf.keras.models.Sequential([
+        tf.keras.layers.LSTM(30,return_sequences=True,input_shape=[window_size,1]),  #lstm
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.LSTM(20),
+        tf.keras.layers.RepeatVector(prediction_steps),  #repeat vec
+        tf.keras.layers.LSTM(20, return_sequences = True),   #lstm
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.LSTM(30, return_sequences=True),  #lstm
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(50, activation = 'relu')), #dense
+        tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(20, activation = 'relu')), 
+        tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(1)),
+        tf.keras.layers.Lambda(lambda x: (x*(maxrhum-minrhum))+ minrhum)
+    ])
+    
+    return model_6
+    
+else:
+    print('Did you set your model choice..')
+    print('Did you set your model choice..')
+    print('Did you set your model choice..')
+  
+
+  
+if load_model == False:
+    print(model_save_to, ' ', csv_save_to)
+    tf.keras.backend.clear_session()
+    rhum_history_actual = model.fit(**fitConfig)  
+    model.save(model_save_to)  
+
+elif load_model == True:
+    print(model_save_to, ' ', csv_save_to)
+    tf.keras.backend.clear_session()
+    loaded_model = tf.keras.models.load_model(model_load_from)
+    rhum_history_loaded = loaded_model.fit(**fitConfig)
+    loaded_model.save(model_save_to)  
+
+else:
+    print('Invalid load_model choice!')
