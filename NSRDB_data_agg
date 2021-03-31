@@ -1,0 +1,124 @@
+# Reference Code; Do not run
+# API Key is : 'bveeKMcU8cE8bRQUjObGNCNcybN6DyS7uENdV980'
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from statsmodels.tsa.stattools import adfuller
+
+data = []
+numpy_path = '/content/drive/MyDrive/UCD_Stuff/PSMAllStationsData/numpyFormat/'
+
+for filename in os.listdir(numpy_path):
+    if filename.endswith("npy"): 
+        # Your code comes here such as 
+        data.append(filename)
+assert len(data) == 100, print("len(data): ", len(data))
+dict_of_stations_by_gmt = {'[-10]':[],'[-5]':[],'[-6]':[],'[-7]':[],'[-8]':[]}
+
+for npy in data:
+  if '[-10]' in npy:
+    ten = np.load(numpy_path+npy)
+    dict_of_stations_by_gmt['[-10]'].append(ten)
+
+  elif '[-8]' in npy:
+    eight = np.load(numpy_path+npy)
+    dict_of_stations_by_gmt['[-8]'].append(eight)
+
+  elif '[-7]' in npy:
+    seven = np.load(numpy_path+npy)
+    dict_of_stations_by_gmt['[-7]'].append(seven)
+
+  elif '[-6]' in npy:
+    six = np.load(numpy_path+npy)
+    dict_of_stations_by_gmt['[-6]'].append(six)
+
+  elif '[-5]' in npy:
+    five = np.load(numpy_path+npy)
+    dict_of_stations_by_gmt['[-5]'].append(five)
+
+  else:
+    print('GMT parsing error at ', npy)
+
+''''
+to account for gmt differences, take out the following:
+first 5 from all -10
+first 3/last 2 from all -8
+first 2/last 3 from all -7 
+first 1/last 4 from all -6
+last 5 from all -5
+'''
+
+
+for ten_idx,ten_numpy in enumerate(dict_of_stations_by_gmt['[-10]']):
+  dict_of_stations_by_gmt['[-10]'][ten_idx] = ten_numpy[5:,:]
+
+for eight_idx, eight_numpy in enumerate(dict_of_stations_by_gmt['[-8]']):
+  dict_of_stations_by_gmt['[-8]'][eight_idx] = eight_numpy[3:-2,:]
+
+for seven_idx, seven_numpy in enumerate(dict_of_stations_by_gmt['[-7]']):
+  dict_of_stations_by_gmt['[-7]'][seven_idx] = seven_numpy[2:-3,:]
+
+
+for six_idx, six_numpy in enumerate(dict_of_stations_by_gmt['[-6]']):
+  dict_of_stations_by_gmt['[-6]'][six_idx] = six_numpy[1:-4,:]
+
+
+for five_idx, five_numpy in enumerate(dict_of_stations_by_gmt['[-5]']):
+  dict_of_stations_by_gmt['[-5]'][five_idx] = five_numpy[:-5,:]
+
+# (samples, time_steps, channels, rows, cols)
+zeros = np.zeros((192715,4,10,10))
+column = 0
+row_counter = 0
+
+for gmt_key in ['[-10]' , '[-8]' , '[-7]' , '[-6]' , '[-5]']: #for each gmt
+  for station_in_this_gmt in dict_of_stations_by_gmt[gmt_key]: #iterate thru all stations in this gmt
+
+    if row_counter!= 10:  #if you havent go thru all the rows in this column yet
+      rhum_extract = station_in_this_gmt[:, 1] #extract rhum column (192715,1)
+      rhum_extract = rhum_extract.reshape((192715,1))
+
+      sza_extract = station_in_this_gmt[:, 2] #extract sza
+      sza_extract = sza_extract.reshape((192715,1))
+
+      ghi_extract = station_in_this_gmt[:, 3] #extract ghi column (192715,1)
+      ghi_extract = ghi_extract.reshape((192715,1))
+
+      temp_extract = station_in_this_gmt[:,0]
+      temp_extract = temp_extract.reshape((192715,1))
+
+      concat = np.concatenate((rhum_extract, sza_extract, ghi_extract, temp_extract), axis=1)
+      zeros[:,:,row_counter,column] = concat #add this station of (192715,4) to this pixel
+      row_counter += 1 #moves on to next row
+  
+    elif row_counter == 10: #end of row reached (means we are at row 0 of the next column)
+      column += 1 #hop to next column
+      row_counter = 0 #re-initialise row_counter
+
+      rhum_extract = station_in_this_gmt[:, 1] #extract rhum column (192715,1)
+      rhum_extract = rhum_extract.reshape((192715,1))
+      sza_extract = station_in_this_gmt[:, 2] #extract sza
+      sza_extract = sza_extract.reshape((192715,1))
+      ghi_extract = station_in_this_gmt[:, 3] #extract ghi column (192715,1)
+      ghi_extract = ghi_extract.reshape((192715,1))
+      temp_extract = station_in_this_gmt[:,0]
+      temp_extract = temp_extract.reshape((192715,1))
+
+      concat = np.concatenate((rhum_extract, sza_extract, ghi_extract, temp_extract), axis=1)
+      zeros[:,:,row_counter,column] = concat #add this station of (192715,2) to this pixel
+      row_counter += 1 #moves on to next row
+      
+np.save('/content/drive/MyDrive/UCD_Stuff/5DTensorALLVARS',zeros)
+df = pd.read_csv('/content/drive/MyDrive/UCD_Stuff/PSMAllStationsData/GMT[-6]-Station-878848.csv',engine='c')
+len(df)
+
+plt.figure(figsize=(16, 6))
+heatmap = sns.heatmap(df.corr(), vmin=-1, vmax=1, annot=True)
+heatmap
+result = adfuller(univariate_non_spatial_data[:168])
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+print('Critical Values:')
+for key, value in result[4].items():
+	print('\t%s: %.3f' % (key, value))
