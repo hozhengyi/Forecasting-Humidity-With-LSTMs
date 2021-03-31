@@ -1,0 +1,132 @@
+# smoothing
+# ARIMA
+# Naive Ratio
+#ARIMA (LAG, DIFF , ERR )
+! pip install pmdarima
+from pmdarima.arima import auto_arima
+import pmdarima
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.arima_model import ARIMA
+import statsmodels
+from matplotlib import pyplot
+import sklearn
+import time
+import matplotlib.pyplot as plt
+
+def sMAPE(A, F):
+    return 100/len(A) * np.sum(2 * np.abs(F - A) / (np.abs(A) + np.abs(F)))
+    
+tmy3_csv = pd.read_csv('/content/drive/MyDrive/UCD_Stuff/tmy3.csv')
+tmy3 = tmy3_csv[['Date (MM/DD/YYYY)', 
+                 'Time (HH:MM)', 
+                 'RHum (%)']]
+tmy3 = tmy3.astype({'Time (HH:MM)': str,
+                   })
+
+tmy3['Time (HH:MM)'] = tmy3['Time (HH:MM)'].replace('24:00','00:00')
+
+tmy3['dateTime'] = tmy3['Date (MM/DD/YYYY)'].astype(str) + ' '+ tmy3['Time (HH:MM)']
+
+del tmy3['Time (HH:MM)']
+del tmy3['Date (MM/DD/YYYY)']
+
+tmy3['dateTime'] = tmy3['dateTime'] + ':00'
+
+tmy3['dateTime'] = pd.to_datetime(tmy3['dateTime'],
+                                 infer_datetime_format=True,
+                                 )
+tmy3 = tmy3.groupby(['dateTime']).mean()
+tmy3 = tmy3.reset_index()
+
+np_rhum = pd.Series.to_frame(tmy3['RHum (%)'])
+np_datetime = pd.Series.to_frame(tmy3['dateTime'])
+
+np_rhum = np_rhum.to_numpy(copy=True)
+np_datetime = np_datetime.to_numpy(copy=True)
+
+rhum = tmy3['RHum (%)'].to_frame()
+
+
+rhum_train = np_rhum[:-24]
+datetime_train = np_datetime[:-24]
+
+
+rhum_test = np_rhum[-24:]
+datetime_test = np_datetime[-24:]
+
+rhum_train = rhum_train.reshape(217464,)
+rhum_test = rhum_test.reshape(24,)
+datetime_train = datetime_train.reshape(217464,)
+datetime_test = datetime_test.reshape(24,)
+
+rhum_train_series = pd.Series(rhum_train,index=datetime_train)
+rhum_test_series = pd.Series(rhum_test,index=datetime_test)
+
+
+# Method (1)
+# https://towardsdatascience.com/time-series-forecasting-using-auto-arima-in-python-bb83e49210cd
+
+# statsmodels.tsa.stattools.adfuller(rhum_train)
+'''
+auto_arima_model = auto_arima(rhum_train_series, start_p =5 , d=0,start_q=5,
+                              max_p = 6, max_d=0, max_q=7, start_P =0, D=0,
+                              start_Q=0, max_P=0,max_D=0,max_Q=0, m=1, seasonal=False,error_action='warn',
+                              trace= True, supress_warinings= True, stepwise= True,
+                              random_state=20, n_fits = 50, max_iter=100)
+'''
+arima = statsmodels.tsa.arima_model.ARIMA(rhum_train_series, (5,0,1))
+arima_fit = arima.fit()
+
+#Naive With Drift (multi-step)
+
+#find equation of line between first and last point in the training set
+gradient =  ( rhum_train_series[-1] - rhum_train_series[0] ) / ( len(rhum_train_series) - 2 )
+const = rhum_train_series[-1] - (gradient * (len(rhum_train_series) -1) )
+
+#extrapolate line 24 steps into the future
+naive_with_drift_predictions = []
+for i in range (24):
+  x = len(rhum_train_series) + i
+  y = (gradient * x) + const
+  naive_with_drift_predictions.append(y)
+print("Results of Naive with Drift (Multi-Step)")
+print("MAE is: ", sklearn.metrics.mean_absolute_error(rhum_test, naive_with_drift_predictions))
+print("MSE is: ", sklearn.metrics.mean_squared_error(rhum_test, naive_with_drift_predictions))
+print("sMAPE is: ", sMAPE(rhum_test, naive_with_drift_predictions))
+
+#Naive (One-Step)
+rhum_naive_predict = rhum_test[:-1]
+rhum_naive_true = rhum_test[1:]
+print("Results of Naive (One-Step)")
+print("MAE is: ", sklearn.metrics.mean_absolute_error(rhum_naive_true, rhum_naive_predict))
+print("MSE is: ", sklearn.metrics.mean_squared_error(rhum_naive_true, rhum_naive_predict))
+print("sMAPE is: ", sMAPE(rhum_naive_true, rhum_naive_predict))
+
+def plot(y_axis_name,title, x,  x_axis_name= 'Epochs' , y = [] , y_names = [], axis = [0,20,0,300]):
+  plt.rcParams["figure.figsize"]= 40 , 14
+  
+  if len(axis) != 4:
+    print('ERROR: axis list length must be 4, denoting [xmin,xmax,ymin,ymax]')
+    return None
+  if len(y) != len(y_names):
+    print('ERROR: Length of y and y_names must be the same! try again.')
+    return None
+
+  for item,name in zip(y,y_names): 
+    plt.plot(x,item, label= name, linewidth = 1.0)
+  
+  plt.title(title, fontsize=32)
+  plt.ylabel(y_axis_name, fontsize=32)
+  plt.xlabel(x_axis_name, fontsize=32)
+  plt.legend(loc="upper left", fontsize=36)
+  plt.xticks(range(0,43498),rotation = 65, fontsize = 18)
+  plt.yticks(fontsize=24)
+  plt.axis(axis)
+  plt.show()
+  
+  plot('Val_MAE','ARIMA vs ACTUAL', x=[i for i in range(43498)],  x_axis_name= 'Time' , 
+     y = [rhum_valid_series,autoArimaPredicted] , 
+     y_names = ['Actual Rhum','ARIMA(5,0,1) Predicted Rhum'], axis = [43400,43498,40,110])
