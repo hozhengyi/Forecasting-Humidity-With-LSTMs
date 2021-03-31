@@ -1,0 +1,79 @@
+!pip install tensorflow-addons
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import tensorflow_addons as tfa
+import os
+import keras.backend as K
+
+window_size = 168
+batch_size = 100
+shuffle_buffer = 20000 #greater than or equal to dataset
+train , valid =  157715, 182715  #train 80%, valid 25k, train 10k 
+prediction_steps = 24
+# (window[-24:,0]*(max_rhum-min_rhum))+ min_rhum
+def tensor_windowed_dataset(data, window_size, batch_size, shuffle_buffer, min_rhum, max_rhum):
+    dataset = tf.data.Dataset.from_tensor_slices(data) #take each row and slice
+    dataset = dataset.window(window_size + 24, shift=1, drop_remainder=True) # +1 is the prediction
+    dataset = dataset.flat_map(lambda window: window.batch(window_size + 24)) #192 batch 'windows'
+    dataset = dataset.shuffle(shuffle_buffer).map(lambda window: (window[:-24,:,:,:], (window[-24:,0,4,4]*(max_rhum-min_rhum))+ min_rhum )) #1557 windows
+    dataset = dataset.batch(batch_size).prefetch(1)
+    return dataset
+
+def scheduler_lr_divided_by_epoch(epoch, lr):
+    return 1e-3/(epoch+1)
+
+def reduce_per_three(epoch, lr):
+  if epoch % 3 == 0:
+    return lr/(epoch)
+  else:
+    return lr
+
+def custom(epoch, lr):
+    return 1e-3/(epoch+1)
+
+class printLearningRate(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs={}):
+        optimizer = self.model.optimizer
+        lr = K.eval(optimizer.lr)
+        lr_dict[epoch] = lr
+        Epoch_count = epoch + 1
+        print('\n', "Epoch:", Epoch_count, ', LR: {:.8f}'.format(lr))
+
+df_np = np.load('/content/drive/MyDrive/UCD_Stuff/5DTensorALLVARS.npy')
+
+
+rhum_max , rhum_min = max(df_np[:,0,:,:].flatten()) , min(df_np[:,0,:,:].flatten())
+sza_max , sza_min = max(df_np[:,1,:,:].flatten()) , min(df_np[:,1,:,:].flatten())
+ghi_max, ghi_min = max(df_np[:,2,:,:].flatten()) , min(df_np[:,2,:,:].flatten())
+temp_max , temp_min =  max(df_np[:,3,:,:].flatten()) , min(df_np[:,3,:,:].flatten())
+
+rhum_max_44 = max(df_np[:,0,4,4])
+rhum_min_44 = min(df_np[:,0,4,4])
+
+#normalising
+df_np[:,0,:,:] = (df_np[:,0,:,:] - rhum_min)/(rhum_max-rhum_min) #rhum
+df_np[:,1,:,:] = (df_np[:,1,:,:] - sza_min)/(sza_max- sza_min) #sza
+df_np[:,2,:,:] = (df_np[:,2,:,:] - ghi_min)/(ghi_max-ghi_min) #ghi
+df_np[:,3,:,:] = (df_np[:,3,:,:] - temp_min)/(temp_max-temp_min) #temp
+
+rhum_train = df_np[:train,:,:,:]
+rhum_train = rhum_train.reshape((157715,4,10,10))
+rhum_train = rhum_train
+
+rhum_valid = df_np[train:valid,:,:,:]
+rhum_valid = rhum_valid.reshape((25000,4,10,10))
+rhum_valid = rhum_valid
+
+rhum_test = df_np[valid:,:,:,:]
+rhum_test = rhum_test.reshape((10000,4,10,10))
+rhum_test = rhum_test
+
+assert len(rhum_train) + len(rhum_valid) + len(rhum_test) ==  len(df_np)
+
+rhum_train_window = tensor_windowed_dataset(rhum_train, window_size,batch_size,shuffle_buffer,rhum_min_44, rhum_max_44)
+rhum_valid_window = tensor_windowed_dataset(rhum_valid, window_size,batch_size,shuffle_buffer, rhum_min_44, rhum_max_44)
+rhum_test_window = tensor_windowed_dataset(rhum_test, window_size,batch_size,shuffle_buffer, rhum_min_44, rhum_max_44)
+
+
+# test if line 57-60 is correctly done
