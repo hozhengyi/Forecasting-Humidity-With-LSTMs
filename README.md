@@ -15,6 +15,8 @@ The following libraries should be installed before the execution of the codes:
 - Numpy 1.20 `pip install numpy`
 - Pandas 1.2 `pip install pandas`
 - matplotlib 3.4 `pip install matplotlib`
+- Seaborn 0.11 `pip install seaborn`
+- statsmodels 0.12 `pip install statsmodels`
 - Tensorflow 2.4 `pip install tensorflow`
 
 ## Data Files
@@ -25,5 +27,19 @@ The following file contains the training/validation data used in this work.
 
 ## Scripts
 The following list is a description of each Python script contained in this repository.
+- `NSRDB_data_agg.ipynb` Automates API downloads for NSRDB data, performs time-zone correction and saves it as CSV and Numpy File. Also performs ADFuller test 
+- `data_input.ipynb` Perform loading from numpy, data normalization, setting up tf.data.datasets pipeline, as well as function definitions for learning rate schedulers.
+-  `model_architecture.ipynb` Creates model architecture (as mentioned in the paper) using Keras' Sequential API
+-  `model_config.ipynb` Instantiates callbacks, set save/load paths, set compile and fit configs
+-  `plt_plotter.ipynb` Helper function to plot matplotlib graphs used in the paper
 
 # Running
+To replicate this paper's results, each script can be run sequentially. The steps are provided below in running order.
+1. Download the dependencies
+2. Acquire an API key from the NSRDB site [here](https://developer.nrel.gov/signup/).
+3. Using `NSRDB_data_agg.ipynb`, enter your API key and download the dataset as Numpy and CSV files.
+4. Using `data_input.ipynb`, specify your Numpy/CSV paths and create a tf.data.datasets instance. Hyper-parameters are listed inside the notebook.
+5. Using `model_architecture.ipynb`, specify your model_choice and build the desired model. Hyper-parameters are listed inside the notebook.
+6. Using `model_config.ipynb`, create callbacks, set load/save paths. Hyper-parameters are listed inside the notebook.
+7. Run Keras' model.compile() and model.fit() given the configurations in `model_config.ipynb` (Step 6)
+8. Plot results using `plt_plotter.ipynb`
