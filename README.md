@@ -8,9 +8,6 @@ Ho. Z.Y, Jain. M and Dev, S.(2021). Stateful Neural Networks for Relative Humidi
 All code is written in Python 3.7. 
 A powerpoint summary of this work is available in this repository as `UCD_Slides.pptx`.
 
-![Alt text](train.png)
-
-![Alt text](valid.png)
 
 # Code Organisation
 ## Dependencies
