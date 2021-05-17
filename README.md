@@ -5,9 +5,9 @@ With the spirit of reproducible research, this repository contains all the codes
 
 Ho. Z.Y, Jain. M and Dev, S.(2021). Stateful Neural Networks for Relative Humidity Forecasting
 
-All code is written in Python 3.7
+All code is written in Python 3.7. 
+A powerpoint summary of this work is available in this repository as ``.
 
-see my slides at https://docs.google.com/presentation/d/1PbFpqZ0tOpQJGvHdPQ_EGJroVBX2LmHM6-kdwXLvHfc/edit?usp=sharing
 
 # Code Organisation
 ## Dependencies
