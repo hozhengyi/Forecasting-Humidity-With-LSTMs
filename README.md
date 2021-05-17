@@ -8,9 +8,10 @@ Ho. Z.Y, Jain. M and Dev, S.(2021). Stateful Neural Networks for Relative Humidi
 All code is written in Python 3.7. 
 A powerpoint summary of this work is available in this repository as `UCD_Slides.pptx`.
 
-![Training Loss](hhttps://github.com/hozhengyi/rh_forecasting_with_lstms/blob/main/train.png)
+![Training Loss](hhttps://github.com/hozhengyi/rh_forecasting_with_lstms/blob/main/train.png?raw=true)
 
-![Validation Loss](hhttps://github.com/hozhengyi/rh_forecasting_with_lstms/blob/main/valid.png)
+![Validation Loss](hhttps://github.com/hozhengyi/rh_forecasting_with_lstms/blob/main/valid.png?raw=true)
+
 # Code Organisation
 ## Dependencies
 The following libraries should be installed before the execution of the codes:
